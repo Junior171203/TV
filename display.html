@@ -53,7 +53,7 @@
   <div id="message"></div>
   <button id="enableSound">🔊 Включить звук</button>
 
-  <audio id="notifySound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"></audio>
+  <audio id="notifySound" src="Мамонт 2.mp3"></audio>
 
   <script>
     const bgDiv = document.getElementById('backgroundText');
@@ -61,6 +61,7 @@
     const audio = document.getElementById('notifySound');
     const soundBtn = document.getElementById('enableSound');
 
+    let queue = [];
     let showingNotification = false;
 
     soundBtn.addEventListener('click', () => {
@@ -86,40 +87,48 @@
     }
 
     async function fetchMessages() {
-      if (showingNotification) return;
+      if (showingNotification || queue.length > 0) return;
 
       try {
         const res = await fetch('https://script.google.com/macros/s/AKfycbxVVkIad26K7uwn36VfVO7xcCUe_OeGzC2flVEX3fKsDM9aCiftGdktNI0oLvH9Ho_w/exec');
         const messages = await res.json();
 
         if (messages.length > 0) {
-          showingNotification = true;
-          const message = messages[0];
-
-          msgDiv.textContent = message;
-          msgDiv.style.display = 'flex';
-          bgDiv.style.display = 'none';
-          document.body.style.background = 'white';
-          document.body.style.color = 'black';
-
-          audio.play().catch(console.error);
-
-          setTimeout(() => {
-            msgDiv.style.display = 'none';
-            bgDiv.style.display = 'flex';
-            document.body.style.background = 'black';
-            document.body.style.color = '#aaa';
-            showingNotification = false;
-          }, 20000);
-
-          setTimeout(() => {
-            audio.pause();
-            audio.currentTime = 0;
-          }, 5000);
+          queue.push(...messages);
+          showNextNotification();
         }
       } catch (e) {
         console.error('Ошибка получения сообщений:', e);
       }
+    }
+
+    function showNextNotification() {
+      if (queue.length === 0) return;
+      showingNotification = true;
+
+      const message = queue.shift();
+      msgDiv.textContent = message;
+      msgDiv.style.display = 'flex';
+      bgDiv.style.display = 'none';
+      document.body.style.background = 'white';
+      document.body.style.color = 'black';
+
+      audio.play().catch(console.error);
+
+      setTimeout(() => {
+        msgDiv.style.display = 'none';
+        bgDiv.style.display = 'flex';
+        document.body.style.background = 'black';
+        document.body.style.color = '#aaa';
+        showingNotification = false;
+
+        if (queue.length > 0) showNextNotification();
+      }, 20000);
+
+      setTimeout(() => {
+        audio.pause();
+        audio.currentTime = 0;
+      }, 5000);
     }
 
     fetchBackground();
